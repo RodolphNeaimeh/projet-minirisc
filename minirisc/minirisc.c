@@ -37,6 +37,7 @@ void minirisc_fetch(minirisc_t *mr)
 enum {
     MR_OPCODE_LUI = 0x01,
     MR_OPCODE_AUIPC = 0x02,
+    MR_OPCODE_JAL = 0x03,
     MR_OPCODE_BEQ = 0x05,
     MR_OPCODE_ADDI = 0x13,
     MR_OPCODE_EBREAK = 0x27
@@ -82,6 +83,18 @@ static inline uint32_t mr_get_imm_U(const minirisc_t *mr)
     return mr->IR & UINT32_C(0xfffff000);
 }
 
+static inline int32_t mr_get_imm_J(const minirisc_t *mr)
+{
+    int32_t imm = (int32_t)(mr->IR >> 12);
+
+    // Interprète le champ de 20 bits comme un entier signé.
+    if (imm >= (1 << 19)) {
+        imm -= (1 << 20);
+    }
+
+    return imm * 2; // Décalage en octets.
+}
+
 void minirisc_decode_and_execute(minirisc_t *mr)
 {
     switch (mr->IR & 0x7fu) {
@@ -92,6 +105,11 @@ void minirisc_decode_and_execute(minirisc_t *mr)
 
     case MR_OPCODE_AUIPC:
         mr_write_rd(mr, mr->PC + mr_get_imm_U(mr));
+        return;
+
+    case MR_OPCODE_JAL:
+        mr_write_rd(mr, mr->next_PC);
+        mr->next_PC = mr->PC + (uint32_t)mr_get_imm_J(mr);
         return;
 
     case MR_OPCODE_ADDI: {
@@ -111,7 +129,7 @@ void minirisc_decode_and_execute(minirisc_t *mr)
     }
 
     case MR_OPCODE_EBREAK:
-        if (mr->IR == UINT32_C(0x00000027)) {
+        if (mr->IR == UINT32_C(0x00000027)) {          
             mr->halt = 1;
             return;
         }
