@@ -129,16 +129,18 @@ int platform_write(platform_t *plt, platform_access_type_t access_type,
         return -1;
     }
 
-    if (size == 4) {
-        switch (addr) {
-        case CHAROUT_CHR:
-            return putchar((unsigned char)data) == EOF ? -1 : 0;
-        case CHAROUT_DEC:
-            return printf("%" PRId32, (int32_t)data) < 0 ? -1 : 0;
-        case CHAROUT_HEX:
-            return printf("%" PRIx32, data) < 0 ? -1 : 0;
-        }
+     if (addr == CHAROUT_CHR && (size == 1 || size == 4)) {
+    return putchar((unsigned char)data) == EOF ? -1 : 0;
+}
+
+if (size == 4) {
+    switch (addr) {
+    case CHAROUT_DEC:
+        return printf("%" PRId32, (int32_t)data) < 0 ? -1 : 0;
+    case CHAROUT_HEX:
+        return printf("%" PRIx32, data) < 0 ? -1 : 0;
     }
+}
 
     if (addr < RAM_BASE || addr - RAM_BASE > RAM_SIZE_BYTES - size) {
         return -1;
